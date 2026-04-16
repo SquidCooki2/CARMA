@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 
 def get_look_at_projection_matrix(intrinsics, camera_pos, target_pos=[0, 0, 0]):
     """

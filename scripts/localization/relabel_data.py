@@ -37,5 +37,5 @@ def relabel_to_single_class(base_path):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    egohands_path = os.path.join(script_dir, "../data/egohands")
+    egohands_path = os.path.join(script_dir, "../../data/egohands")
     relabel_to_single_class(egohands_path)

@@ -1,4 +1,4 @@
-import cv2
+import os
 import yaml
 import numpy as np
 from ultralytics import YOLO
@@ -59,7 +59,8 @@ class HandLocalizer:
 
 if __name__ == "__main__":
     # Test with dummy coordinates
-    config_file = "../configs/camera_params.yaml"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_file = os.path.join(script_dir, "../../configs/camera_params.yaml")
     # To run without a model, set model_path to None
     localizer = HandLocalizer(config_file, None)
     

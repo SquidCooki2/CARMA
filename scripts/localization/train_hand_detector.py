@@ -27,6 +27,6 @@ if __name__ == "__main__":
     # Point to the unified YAML configuration in the data folder
     # Using absolute path to avoid issues with working directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.join(script_dir, "../data/egohands.yaml")
+    data_path = os.path.join(script_dir, "../../data/egohands.yaml")
     
     train_hand_detector(data_path)
