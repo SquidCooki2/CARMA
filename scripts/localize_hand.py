@@ -28,7 +28,6 @@ class HandLocalizer:
     def detect_hands_in_frames(self, frames):
         """
         Detects hand centers in multiple frames.
-        frames: list of 3 images
         """
         if self.model is None:
             raise ValueError("Model not loaded. Cannot detect hands in frames.")
