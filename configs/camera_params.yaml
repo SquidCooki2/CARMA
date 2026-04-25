@@ -1,12 +1,12 @@
 # Camera Intrinsic Parameters for Logitech C920 at 1080p
 # Values based on common calibration results
 intrinsics:
-  width: 1920
-  height: 1080
-  fx: 1394.60
-  fy: 1394.60
-  cx: 995.59
-  cy: 599.32
+  width: 640
+  height: 480
+  fx: 641.5
+  fy: 641.5
+  cx: 320.0
+  cy: 240.0
   distortion: [0.1148, -0.2195, 0.0012, 0.0086, 0.1127]
 
 # Camera Extrinsic Parameters from CAD (in mm)

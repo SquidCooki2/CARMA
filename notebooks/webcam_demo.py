@@ -12,7 +12,7 @@ def run_webcam_demo(model_path):
         model = YOLO(model_path)
     
     # 2. Open the webcam (0 is usually the default camera)
-    cam = 1403
+    cam = 703
     print(f"Attempting to open webcam at index: {cam}")
     cap = cv2.VideoCapture(cam)
     
