@@ -1,14 +1,19 @@
+
 import cv2
 from ultralytics import YOLO
 import os
 
 def run_webcam_demo(model_path):
     # 1. Load the fine-tuned model
-    print(f"Loading model from: {model_path}")
-    model = YOLO(model_path)
+    debug = False
+
+    if not debug:
+        print(f"Loading model from: {model_path}")
+        model = YOLO(model_path)
     
     # 2. Open the webcam (0 is usually the default camera)
-    cam = 0
+    cam = 1403
+    print(f"Attempting to open webcam at index: {cam}")
     cap = cv2.VideoCapture(cam)
     
     if not cap.isOpened():
@@ -24,30 +29,31 @@ def run_webcam_demo(model_path):
             break
             
         # 3. Run YOLO inference
-        results = model.predict(frame, conf=0.5, verbose=False)
+        if not debug:
+            results = model.predict(frame, conf=0.5, verbose=False)
         
-        # 4. Draw detections on the frame
-        for result in results:
-            boxes = result.boxes
-            for box in boxes:
-                # Get coordinates
-                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-                
-                # Get confidence
-                conf = box.conf[0].cpu().numpy()
-                
-                # Draw bounding box (Green)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                
-                # Add label with confidence
-                label = f"Hand: {conf:.2f}"
-                cv2.putText(frame, label, (x1, y1 - 10), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                
-                # Mark the center point (for triangulation demo)
-                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
-                cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
+            # 4. Draw detections on the frame
+            for result in results:
+                boxes = result.boxes
+                for box in boxes:
+                    # Get coordinates
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                    
+                    # Get confidence
+                    conf = box.conf[0].cpu().numpy()
+                    
+                    # Draw bounding box (Green)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    
+                    # Add label with confidence
+                    label = f"Hand: {conf:.2f}"
+                    cv2.putText(frame, label, (x1, y1 - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    
+                    # Mark the center point (for triangulation demo)
+                    cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                    cv2.circle(frame, (cx, cy), 5, (0, 0, 255), -1)
 
         # 5. Display the resulting frame
         cv2.imshow('Hand Detection Demo', frame)

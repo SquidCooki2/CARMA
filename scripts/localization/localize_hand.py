@@ -2,7 +2,7 @@ import os
 import yaml
 import numpy as np
 from ultralytics import YOLO
-from geometry_utils import get_look_at_projection_matrix, triangulate_n_views, get_hand_center
+from .geometry_utils import get_look_at_projection_matrix, triangulate_n_views, get_hand_center
 
 class HandLocalizer:
     def __init__(self, config_path, model_path):
