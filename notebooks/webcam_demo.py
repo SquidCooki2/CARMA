@@ -17,7 +17,7 @@ def run_webcam_demo(model_path):
     
     # Open the webcam 
     # (Defaulting to 1400 range based on your previous logs, fallback to 0 if needed)
-    cam = 1400 
+    cam = 701
     print(f"Attempting to open webcam at index: {cam}")
     cap = cv2.VideoCapture(cam)
     
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     model_root = os.path.join(script_dir, "../models")
     
     if os.path.exists(model_root):
-        train_folders = [f for f in os.listdir(model_root) if f.startswith('train')]
+        train_folders = [f for f in os.listdir(model_root) if f.startswith('train') and not f.endswith('.zip')]
         if train_folders:
             latest_train = sorted(train_folders)[-1]
             model_file = os.path.join(model_root, latest_train, "weights/best.pt")
