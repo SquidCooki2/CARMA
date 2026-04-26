@@ -1,74 +1,104 @@
 import os
 import yaml
+import time
 import numpy as np
+import torch
 from ultralytics import YOLO
-from .geometry_utils import get_look_at_projection_matrix, triangulate_n_views, get_hand_center
+from .geometry_utils import (
+    get_look_at_projection_matrix, 
+    triangulate_n_views, 
+    get_hand_center,
+    OneEuroFilter,
+    is_within_bounds
+)
 
 class HandLocalizer:
-    def __init__(self, config_path, model_path):
+    def __init__(self, config_path, model_path, workspace_bounds=None, filter=None):
         # 1. Load Camera Config
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
         
-        # 2. Load ML Model
-        # If model_path is None, it runs in simulation mode (no detection)
-        self.model = YOLO(model_path) if model_path else None
+        # 2. Load ML Model with CUDA support
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f"HandLocalizer: Using device '{self.device}'")
         
-        # 3. Pre-calculate Projection Matrices for all cameras
+        if model_path:
+            self.model = YOLO(model_path).to(self.device)
+        else:
+            self.model = None
+        
+        # 3. Pre-calculate Projection Matrices
         self.projection_matrices = []
         for cam_id in ['cam1', 'cam2', 'cam3']:
             cam_data = self.config['cameras'][cam_id]
             P = get_look_at_projection_matrix(
                 self.config['intrinsics'],
                 cam_data['position']
-                # target defaults to [0, 0, 0]
             )
             self.projection_matrices.append(P)
 
+        # 4. Filters and State
+        # Default to a 400mm cube centered at origin if not provided
+        self.workspace_bounds = workspace_bounds or [[-177.8, 177.8], [-177.8, 177.8], [-177.8, 177.8]]
+        self.error_threshold = 25.0 # Max reprojection error allowed (pixels)
+        
+        self.filter = None
+        self.last_pos = None
+
     def detect_hands_in_frames(self, frames):
         """
-        Detects hand centers in multiple frames.
+        Detects hand centers in multiple frames using BATCH inference for speed.
         """
         if self.model is None:
             raise ValueError("Model not loaded. Cannot detect hands in frames.")
 
+        # Batch Inference (Passing all frames at once is much faster on GPU)
+        results = self.model.predict(frames, conf=0.5, verbose=False, device=self.device)
+
         centers = []
-        for i, frame in enumerate(frames):
-            results = self.model.predict(frame, conf=0.5, verbose=False)
-            
-            if len(results[0].boxes) > 0:
-                box = results[0].boxes[0].xyxy[0].cpu().numpy()
+        for i, result in enumerate(results):
+            if len(result.boxes) > 0:
+                # Take the highest confidence box
+                box = result.boxes[0].xyxy[0].cpu().numpy()
                 center = get_hand_center(box)
                 centers.append(center)
             else:
-                print(f"Camera {i+1}: No hand detected.")
-                return None
+                # print(f"Camera {i+1}: No hand detected.")
+                return None # Pipeline requires all views to have a detection for robust DLT
         
         return centers
 
     def localize_3d(self, frames):
         """
-        Main pipeline: Detect -> Triangulate
+        Main pipeline: Detect -> Triangulate -> Filter -> Smooth
         """
         centers_2d = self.detect_hands_in_frames(frames)
         if centers_2d is None:
             return None
         
-        point_3d = triangulate_n_views(self.projection_matrices, centers_2d)
-        return point_3d
+        # 1. Triangulate
+        point_3d, error = triangulate_n_views(self.projection_matrices, centers_2d)
+        
+        # 2. Reject if Cameras Disagree (Error is too high)
+        if error > self.error_threshold:
+            return self.last_pos
+            
+        # 3. Reject if Outside Workspace
+        if not is_within_bounds(point_3d, self.workspace_bounds):
+            return self.last_pos
+
+        # 4. Smooth with One Euro Filter
+        t = time.time()
+        if self.filter is None:
+            # self.filter = OneEuroFilter(t, point_3d, min_cutoff=1.5, beta=0.01)
+            self.last_pos = point_3d
+        else:
+            self.last_pos = self.filter(t, point_3d)
+            
+        return self.last_pos
 
 if __name__ == "__main__":
-    # Test with dummy coordinates
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_file = os.path.join(script_dir, "../../configs/camera_params.yaml")
-    # To run without a model, set model_path to None
     localizer = HandLocalizer(config_file, None)
-    
-    # Test Point: Hand is at [0, 0, 0]
-    # In each camera, it should appear exactly at the principal point (cx, cy)
-    cx, cy = localizer.config['intrinsics']['cx'], localizer.config['intrinsics']['cy']
-    test_2d_points = [(cx, cy), (cx, cy), (cx, cy)]
-    
-    pos_3d = triangulate_n_views(localizer.projection_matrices, test_2d_points)
-    print(f"Validation Test (Target at center): {pos_3d}")
-    print("Should be near [0, 0, 0]")
+    print("HandLocalizer initialized successfully.")

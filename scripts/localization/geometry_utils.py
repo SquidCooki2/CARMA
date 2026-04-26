@@ -56,6 +56,7 @@ def get_look_at_projection_matrix(intrinsics, camera_pos, target_pos=[0, 0, 0]):
 def triangulate_n_views(projection_matrices, points_2d):
     """
     Triangulates a 3D point from N views using the Direct Linear Transform (DLT).
+    Returns (point_3d, error) where error is the geometric residual.
     """
     A = []
     for P, (u, v) in zip(projection_matrices, points_2d):
@@ -66,7 +67,59 @@ def triangulate_n_views(projection_matrices, points_2d):
     _, _, Vh = np.linalg.svd(A)
     X_homogeneous = Vh[-1]
     point_3d = X_homogeneous[:3] / X_homogeneous[3]
-    return point_3d
+    
+    # Calculate Residual (Error): How far the point is from the rays
+    # High error usually means one camera is seeing a false positive
+    error = 0
+    for P, (u, v) in zip(projection_matrices, points_2d):
+        proj = P @ X_homogeneous
+        u_p, v_p = proj[0]/proj[2], proj[1]/proj[2]
+        error += np.sqrt((u - u_p)**2 + (v - v_p)**2)
+    error /= len(points_2d)
+    
+    return point_3d, error
+
+class OneEuroFilter:
+    def __init__(self, t0, x0, min_cutoff=1.0, beta=0.0, d_cutoff=1.0):
+        self.min_cutoff = float(min_cutoff)
+        self.beta = float(beta)
+        self.d_cutoff = float(d_cutoff)
+        self.x_prev = np.array(x0, dtype=float)
+        self.dx_prev = np.zeros_like(x0, dtype=float)
+        self.t_prev = float(t0)
+
+    def __call__(self, t, x):
+        t = float(t)
+        x = np.array(x, dtype=float)
+        te = t - self.t_prev
+        if te <= 0: return self.x_prev
+
+        # Filter the derivative
+        ad = self._alpha(te, self.d_cutoff)
+        dx = (x - self.x_prev) / te
+        dx_hat = ad * dx + (1 - ad) * self.dx_prev
+
+        # Filter the signal
+        cutoff = self.min_cutoff + self.beta * np.abs(dx_hat)
+        a = self._alpha(te, cutoff)
+        x_hat = a * x + (1 - a) * self.x_prev
+
+        self.x_prev, self.dx_prev, self.t_prev = x_hat, dx_hat, t
+        return x_hat
+
+    def _alpha(self, te, cutoff):
+        tau = 1.0 / (2 * np.pi * cutoff)
+        return 1.0 / (1.0 + tau / te)
+
+def is_within_bounds(point, bounds):
+    """
+    point: [x, y, z]
+    bounds: [[x_min, x_max], [y_min, y_max], [z_min, z_max]]
+    """
+    for i in range(3):
+        if point[i] < bounds[i][0] or point[i] > bounds[i][1]:
+            return False
+    return True
 
 def get_hand_center(bbox):
     """
