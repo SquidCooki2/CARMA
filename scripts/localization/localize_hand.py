@@ -42,7 +42,7 @@ class HandLocalizer:
         self.workspace_bounds = workspace_bounds or [[-177.8, 177.8], [-177.8, 177.8], [-177.8, 177.8]]
         self.error_threshold = 25.0 # Max reprojection error allowed (pixels)
         
-        self.filter = None
+        self.filter = filter
         self.last_pos = None
 
     def detect_hands_in_frames(self, frames):
