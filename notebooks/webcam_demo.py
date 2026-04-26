@@ -85,5 +85,17 @@ def run_webcam_demo(model_path):
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_file = os.path.join(script_dir, "../models/hand_pose_training/run_1/weights/best.pt")
+    # Automatically find the latest training run
+    model_root = os.path.join(script_dir, "../models")
+    
+    if os.path.exists(model_root):
+        train_folders = [f for f in os.listdir(model_root) if f.startswith('train')]
+        if train_folders:
+            latest_train = sorted(train_folders)[-1]
+            model_file = os.path.join(model_root, latest_train, "weights/best.pt")
+        else:
+            model_file = "yolov8n-pose.pt"
+    else:
+        model_file = "yolov8n-pose.pt"
+        
     run_webcam_demo(model_file)
