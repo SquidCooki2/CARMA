@@ -48,6 +48,7 @@ class HandLocalizer:
     def detect_hands_in_frames(self, frames):
         """
         Detects hand centers in multiple frames using BATCH inference for speed.
+        Uses YOLOv8-Pose to extract Keypoint 0 (Wrist) for consistent 3D triangulation.
         """
         if self.model is None:
             raise ValueError("Model not loaded. Cannot detect hands in frames.")
@@ -57,13 +58,18 @@ class HandLocalizer:
 
         centers = []
         for i, result in enumerate(results):
-            if len(result.boxes) > 0:
-                # Take the highest confidence box
-                box = result.boxes[0].xyxy[0].cpu().numpy()
-                center = get_hand_center(box)
-                centers.append(center)
+            # Check if a hand was detected AND if it has keypoints
+            if len(result.boxes) > 0 and hasattr(result, 'keypoints') and result.keypoints is not None:
+                # result.keypoints.xy is a tensor of shape (num_hands, num_keypoints, 2)
+                # We take the first hand [0], and the first keypoint [0] which is the wrist
+                wrist_xy = result.keypoints.xy[0][0].cpu().numpy()
+                
+                # Check if the keypoint is valid (YOLO outputs [0,0] if it can't see the keypoint but sees the box)
+                if wrist_xy[0] == 0 and wrist_xy[1] == 0:
+                    return None
+                    
+                centers.append((wrist_xy[0], wrist_xy[1]))
             else:
-                # print(f"Camera {i+1}: No hand detected.")
                 return None # Pipeline requires all views to have a detection for robust DLT
         
         return centers
