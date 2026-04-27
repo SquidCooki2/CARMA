@@ -17,7 +17,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 sys.path.append(PROJECT_ROOT)
 from scripts.localization.localize_hand import HandLocalizer, OneEuroFilter
 
-# ── Network config ────────────────────────────────────────────────────────────
+# Network config
 VM_IP      = '192.168.100.133'
 POS_PORT   = 5005
 GRASP_PORT = 5006
@@ -25,7 +25,7 @@ GRASP_PORT = 5006
 pos_sock   = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 grasp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
+# Paths
 config_path    = os.path.join(PROJECT_ROOT, 'configs', 'camera_params.yaml')
 yolo_path      = os.path.join(PROJECT_ROOT, 'models', 'hand_localization', 'weights', 'best.pt')
 deformer_path  = os.path.join(PROJECT_ROOT, 'models', 'carma_deformer_epoch_20.pth')
@@ -43,7 +43,7 @@ if not os.path.exists(mp_model_path):
     )
     print('Downloaded.')
 
-# ── CARMA Deformer constants ──────────────────────────────────────────────────
+# CARMA Deformer constants
 T_FRAMES = 4
 
 BEND_TRIPLES = [
@@ -72,7 +72,7 @@ def normalize_mp_landmarks(lm):
         lm = lm / scale
     return lm
 
-# ── Model architecture ────────────────────────────────────────────────────────
+# Model architecture
 class JointEmbedding(nn.Module):
     def __init__(self, d=256):
         super().__init__()
@@ -170,7 +170,7 @@ class CARMADeformer(nn.Module):
         open_pred = self.open_head(fused).squeeze(-1)
         return {'kp_pred': kp_pred, 'open_pred': open_pred}
 
-# ── Load CARMA Deformer ───────────────────────────────────────────────────────
+# Load CARMA Deformer
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
@@ -183,7 +183,7 @@ STRETCH_LO = ck.get('stretch_lo', 0.0)
 STRETCH_HI = ck.get('stretch_hi', 1.0)
 print(f'Deformer loaded. Stretch: lo={STRETCH_LO:.4f} hi={STRETCH_HI:.4f}')
 
-# ── Load MediaPipe ────────────────────────────────────────────────────────────
+# Load MediaPipe
 base_options = mp_python.BaseOptions(model_asset_path=mp_model_path)
 hand_options = mp_vision.HandLandmarkerOptions(
     base_options=base_options,
@@ -193,7 +193,7 @@ hand_options = mp_vision.HandLandmarkerOptions(
 mp_detector = mp_vision.HandLandmarker.create_from_options(hand_options)
 print('MediaPipe ready.')
 
-# ── Load hand position localizer ──────────────────────────────────────────────
+# Load hand position localizer
 localizer = HandLocalizer(
     config_path,
     yolo_path,
@@ -201,7 +201,7 @@ localizer = HandLocalizer(
 )
 print('HandLocalizer ready.')
 
-# ── Grasp inference function ──────────────────────────────────────────────────
+# Grasp inference function
 def infer_grasp(frame_bgr):
     img_np = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     mp_img = mp.Image(image_format=mp.ImageFormat.SRGB, data=img_np)
@@ -230,7 +230,7 @@ def infer_grasp(frame_bgr):
 
     return ensemble
 
-# ── Initialize cameras ────────────────────────────────────────────────────────
+# Initialize cameras
 cam_indices = [703, 701, 702]
 cams = []
 for idx in cam_indices:
@@ -248,10 +248,10 @@ for idx in cam_indices:
 if len(cams) < 3:
     print(f'Only {len(cams)}/3 cameras opened. Check indices.')
 
-print(f'Streaming to {VM_IP} — pos:{POS_PORT}  grasp:{GRASP_PORT}')
+print(f'Streaming to {VM_IP} - pos:{POS_PORT}  grasp:{GRASP_PORT}')
 print('Press Ctrl+C to stop')
 
-# ── Main loop ─────────────────────────────────────────────────────────────────
+# Main loop
 try:
     while True:
         frames = []
@@ -263,7 +263,7 @@ try:
             print('Warning: missing frame')
             continue
 
-        # ── Hand position (all 3 cameras) ─────────────────────────────────
+        # Hand position (all 3 cameras)
         pos = localizer.localize_3d(frames)
         if pos is not None:
             msg = f'{pos[0]:.4f},{pos[1]:.4f},{pos[2]:.4f}'
@@ -272,7 +272,7 @@ try:
         else:
             print('No hand detected', end='   ')
 
-        # ── Grasp intensity (camera 703 = frames[0]) ──────────────────────
+        # Grasp intensity (camera 703 = frames[0])
         intensity = infer_grasp(frames[0])
         if intensity is not None:
             grasp_sock.sendto(f'{intensity:.4f}'.encode(), (VM_IP, GRASP_PORT))

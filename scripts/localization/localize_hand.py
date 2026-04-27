@@ -38,7 +38,6 @@ class HandLocalizer:
             self.projection_matrices.append(P)
 
         # 4. Filters and State
-        # Default to a 400mm cube centered at origin if not provided
         self.workspace_bounds = workspace_bounds or [[-177.8, 177.8], [-177.8, 177.8], [-177.8, 177.8]]
         self.error_threshold = 35.0 # Max reprojection error allowed (pixels)
         

@@ -15,10 +15,10 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision as mp_vision
 
-# ── Constants (from training notebook) ───────────────────────────────────────
+# Constants (from training notebook)
 T_FRAMES    = 4
-STRETCH_LO  = 0.0588   # from your training run — update if different
-STRETCH_HI  = 0.7931   # from your training run — update if different
+STRETCH_LO  = 0.0588   # from your training run - update if different
+STRETCH_HI  = 0.7931   # from your training run - update if different
 
 VM_IP       = '192.168.100.133'  # replace with your VM IP
 VM_PORT     = 5006            # separate port from hand position stream
@@ -28,7 +28,7 @@ MODEL_PATH_CKPT = os.path.join(BASE_DIR, 'models', 'carma_deformer_epoch_20.pth'
 MP_MODEL_PATH   = os.path.join(BASE_DIR, 'models', 'hand_landmarker.task')
 CAMERA_INDEX    = 703   # use whichever camera you prefer
 
-# ── Download MediaPipe hand landmarker if needed ──────────────────────────────
+# Download MediaPipe hand landmarker if needed
 if not os.path.exists(MP_MODEL_PATH):
     print('Downloading MediaPipe hand landmarker...')
     urllib.request.urlretrieve(
@@ -37,7 +37,7 @@ if not os.path.exists(MP_MODEL_PATH):
     )
     print('Downloaded.')
 
-# ── Openness metric ───────────────────────────────────────────────────────────
+# Openness metric
 BEND_TRIPLES = [
     (1,2,3),(2,3,4),(5,6,7),(6,7,8),(9,10,11),(10,11,12),
     (13,14,15),(14,15,16),(17,18,19),(18,19,20),
@@ -64,7 +64,7 @@ def normalize_mp_landmarks(lm):
         lm = lm / scale
     return lm
 
-# ── Model architecture (must match training exactly) ─────────────────────────
+# Model architecture
 class JointEmbedding(nn.Module):
     def __init__(self, d=256):
         super().__init__()
@@ -163,7 +163,7 @@ class CARMADeformer(nn.Module):
         open_pred = self.open_head(fused).squeeze(-1)  # (B,)
         return {'kp_pred': kp_pred, 'open_pred': open_pred}
 
-# ── Load model ────────────────────────────────────────────────────────────────
+# Load model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'Using device: {device}')
 
@@ -178,7 +178,7 @@ STRETCH_HI = ck.get('stretch_hi', STRETCH_HI)
 print(f'Stretch params: lo={STRETCH_LO:.4f}  hi={STRETCH_HI:.4f}')
 print('Model loaded.')
 
-# ── MediaPipe setup ───────────────────────────────────────────────────────────
+# MediaPipe setup
 base_options = mp_python.BaseOptions(model_asset_path=MP_MODEL_PATH)
 hand_options = mp_vision.HandLandmarkerOptions(
     base_options=base_options,
@@ -188,7 +188,7 @@ hand_options = mp_vision.HandLandmarkerOptions(
 detector = mp_vision.HandLandmarker.create_from_options(hand_options)
 print('MediaPipe ready.')
 
-# ── Camera setup ──────────────────────────────────────────────────────────────
+# Camera setup
 cap = cv2.VideoCapture(CAMERA_INDEX)
 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -199,12 +199,12 @@ if not cap.isOpened():
     sys.exit(1)
 print(f'Camera {CAMERA_INDEX} ready.')
 
-# ── UDP socket ────────────────────────────────────────────────────────────────
+# UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 print(f'Streaming grasp intensity to {VM_IP}:{VM_PORT}')
 print('Press Ctrl+C to stop.')
 
-# ── Main loop ─────────────────────────────────────────────────────────────────
+# Main loop
 try:
     while True:
         ret, frame = cap.read()
@@ -223,7 +223,7 @@ try:
                              for l in result.hand_landmarks[0]], dtype=np.float32)
         lm_norm = normalize_mp_landmarks(lm_raw)
 
-        # Repeat single frame T times (same as inference in notebook)
+        # Repeat single frame T times
         lm_clip = np.stack([lm_norm] * T_FRAMES, axis=0)
         inp = torch.tensor(lm_clip, dtype=torch.float32).unsqueeze(0).to(device)
 

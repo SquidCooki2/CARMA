@@ -15,8 +15,7 @@ def run_webcam_demo(model_path):
             print("Falling back to yolov8n-pose.pt for testing.")
             model = YOLO('yolov8n-pose.pt')
     
-    # Open the webcam 
-    # (Defaulting to 1400 range based on your previous logs, fallback to 0 if needed)
+    # Open the webcam
     cam = 701
     print(f"Attempting to open webcam at index: {cam}")
     cap = cv2.VideoCapture(cam)
@@ -29,7 +28,7 @@ def run_webcam_demo(model_path):
             print("Error: Could not open any webcam.")
             return
 
-    # Force MJPEG to test bandwidth limits if needed
+    # Force MJPEG if needed
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -48,11 +47,10 @@ def run_webcam_demo(model_path):
             # Run YOLO-Pose inference
             results = model.predict(frame, conf=0.5, verbose=False)
             
-            # The .plot() function handles drawing the bounding box AND the 21 keypoint skeleton
+            # Draw annotated frame
             annotated_frame = results[0].plot()
             
-            # We explicitly draw a large RED dot over Keypoint 0 (the Wrist)
-            # because this is the specific point HandLocalizer uses for 3D triangulation
+            # Draw RED dot over wrist keypoint (triangulation target)
             if len(results[0].boxes) > 0 and hasattr(results[0], 'keypoints') and results[0].keypoints is not None:
                 wrist_xy = results[0].keypoints.xy[0][0].cpu().numpy()
                 if wrist_xy[0] != 0 and wrist_xy[1] != 0: # Check if visible

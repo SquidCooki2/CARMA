@@ -69,7 +69,6 @@ def triangulate_n_views(projection_matrices, points_2d):
     point_3d = X_homogeneous[:3] / X_homogeneous[3]
     
     # Calculate Residual (Error): How far the point is from the rays
-    # High error usually means one camera is seeing a false positive
     error = 0
     for P, (u, v) in zip(projection_matrices, points_2d):
         proj = P @ X_homogeneous
