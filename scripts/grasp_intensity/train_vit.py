@@ -26,10 +26,7 @@ class GraspDataset(Dataset):
         
         if self.transform:
             image = self.transform(image)
-        
-        # ViT processor expects a PIL image or numpy array
-        # If we applied torchvision transforms, we might have a tensor
-        # But processor usually handles normalization too.
+
         # Let's keep it simple: apply augmentation then processor
         
         inputs = self.processor(images=image, return_tensors="pt")
@@ -41,10 +38,8 @@ class GraspDataset(Dataset):
             'labels': torch.tensor(label, dtype=torch.float32)
         }
 
-def train():
+def train(img_dir='data/freihand/training/rgb', csv_path='data/grasp_intensity/grasp_labels.csv', output_dir='models/grasp_intensity_best', checkpoint_dir='./tmp_trainer_output'):
     model_name = "google/vit-base-patch16-224-in21k"
-    img_dir = 'data/freihand/training/rgb'
-    csv_path = 'data/grasp_intensity/grasp_labels.csv'
     
     if not os.path.exists(csv_path):
         print(f"Labels not found at {csv_path}. Run data_prep.py first.")
@@ -71,20 +66,21 @@ def train():
     )
 
     training_args = TrainingArguments(
-        output_dir="./models/grasp_intensity_vit",
+        output_dir=checkpoint_dir,
         per_device_train_batch_size=32,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         num_train_epochs=3,
         fp16=torch.cuda.is_available(),
-        save_steps=1000,
-        eval_steps=1000,
+        save_steps=500, # Save every 500 steps
+        eval_steps=500,
         logging_steps=100,
         learning_rate=2e-5,
-        save_total_limit=2,
+        save_total_limit=3, # Keep only last 3 checkpoints to save space on Drive
         remove_unused_columns=False,
         push_to_hub=False,
         report_to="none",
         load_best_model_at_end=True,
+        resume_from_checkpoint=True # Automatically try to resume if files exist
     )
 
     trainer = Trainer(
@@ -96,9 +92,10 @@ def train():
 
     trainer.train()
     
-    # Save the final model and processor
-    trainer.save_model("models/grasp_intensity_best")
-    processor.save_pretrained("models/grasp_intensity_best")
+    # Save the final model and processor to the specified output_dir
+    trainer.save_model(output_dir)
+    processor.save_pretrained(output_dir)
+    print(f"Model and processor saved to {output_dir}")
 
 if __name__ == "__main__":
     train()
