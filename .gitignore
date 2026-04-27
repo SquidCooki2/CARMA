@@ -15,7 +15,8 @@ ENV/
 data/egohands/
 models/*.pt
 models/train*/
-models/hand_detector/
+models/hand_localization/
+models/grasp_intensity_best/
 runs/
 
 # IDEs
