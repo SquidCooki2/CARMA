@@ -1,7 +1,0 @@
-# Hand Localization Pipeline - EgoHands Dataset
-train: egohands/train/images
-val: egohands/valid/images
-test: egohands/test/images
-
-nc: 1
-names: ['hand']

@@ -111,4 +111,4 @@ def convert_to_yolo_pose(root_path, output_path, img_size=224, val_split=0.1):
             print(f"\nSuccessfully converted {success_count} / {len(idx_list)} images for {split_name}.")
 
 if __name__ == "__main__":
-    convert_to_yolo_pose('freihand_raw', 'freihand_yolo')
+    convert_to_yolo_pose('data/freihand', 'data/freihand_yolo')

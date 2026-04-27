@@ -6,3 +6,9 @@ matplotlib
 scipy
 cv2_enumerate_cameras
 ipykernel
+transformers
+pandas
+scikit-learn
+torchvision
+torch
+tqdm
